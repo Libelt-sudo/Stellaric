@@ -1,6 +1,8 @@
 use std::ops::Add;
+use std::ops::AddAssign;
 use std::ops::Sub;
 use std::ops::Mul;
+use std::ops::Div;
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,6 +30,14 @@ impl Add for Vector3 {
   }
 }
 
+impl AddAssign for Vector3 {
+  fn add_assign(&mut self, other: Vector3){
+      self.x += other.x;
+      self.y += other.y;
+      self.z += other.z;
+  }
+}
+
 impl Sub for Vector3 {
   type Output = Vector3;
 
@@ -51,6 +61,20 @@ impl Mul<f64> for Vector3 {
     }
   }
 }
+
+impl Div<f64> for Vector3 {
+  type Output = Vector3;
+
+  fn div(self, scalar: f64) -> Vector3{
+    Vector3 {
+      x: self.x / scalar,
+      y: self.y / scalar,
+      z: self.z / scalar
+    }
+  }
+}
+
+
 
 impl Vector3 {
   pub fn dot(self, other: Vector3) -> f64{
