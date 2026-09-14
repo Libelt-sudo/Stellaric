@@ -1,20 +1,21 @@
 use crate::vector::Vector3;
 
 
-const G: f64 = 6.674e-11;           // m³ kg⁻¹ s⁻²
-const _AU: f64 = 1.496e11;           // metres (Earth–Sun distance)
-const _SOLAR_RADIUS: f64 = 6.957e8;  // metres
-const _EARTH_RADIUS: f64 = 6.371e6;  // metres
-const _SOLAR_MASS: f64 = 1.989e30;   // kilograms
+//pub const G: f64 = 6.674e-11;           // m³ kg⁻¹ s⁻²
+pub const G: f64 = 1.0;           // m³ kg⁻¹ s⁻²
+pub const _AU: f64 = 1.496e11;           // metres (Earth–Sun distance)
+pub const _SOLAR_RADIUS: f64 = 6.957e8;  // metres
+pub const _EARTH_RADIUS: f64 = 6.371e6;  // metres
+pub const _SOLAR_MASS: f64 = 1.989e30;   // kilograms
 
-struct Body { 
-  mass: f64,
-  position: Vector3,
-  velocity: Vector3
+pub struct Body { 
+  pub mass: f64,
+  pub position: Vector3,
+  pub velocity: Vector3
 }
 
 impl Body {
-    fn new(mass: f64, position: Vector3, velocity: Vector3) -> Body{
+    pub fn new(mass: f64, position: Vector3, velocity: Vector3) -> Body{
         Body{mass: mass, position: position, velocity: velocity}
     }
 }
@@ -42,7 +43,7 @@ impl Body {
     self.velocity + acc_vec * dt
   }
 
-  fn update_body(&mut self, other: &Body, dt: f64) {
+  pub fn acc_vec(&self, other: &Body) -> Vector3{
     let distance = self.calc_distance(other);
     let g_force = self.calc_gravitational_force(other, distance);
     let dir_vector = self.calc_direction_vector(other, distance);
@@ -50,12 +51,16 @@ impl Body {
     let acc = self.calc_acceleration(g_force);
     let acc_vec = dir_vector * acc;
     
+    acc_vec
+    
+  }
+
+pub fn update_body(&mut self, acc_vec: Vector3, dt: f64) {
     let final_vel = self.calc_final_velocity(acc_vec, dt);
     self.velocity = final_vel;
 
     self.position += self.velocity * dt;
-    
-  }
+}
 }
 
 
