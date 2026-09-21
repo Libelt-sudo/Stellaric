@@ -32,3 +32,10 @@ version = "0.1.0"
 dependencies = [
  "approx",
 ]
+
+[[package]]
+name = "stellaric-visual"
+version = "0.1.0"
+dependencies = [
+ "stellaric-core",
+]

@@ -1,0 +1,7 @@
+[package]
+name = "stellaric-visual"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+stellaric-core = {path = "../stellaric-core"}

@@ -1,13 +1,14 @@
 use crate::vector::Vector3;
 
 
-//pub const G: f64 = 6.674e-11;           // m³ kg⁻¹ s⁻²
-pub const G: f64 = 1.0;           // m³ kg⁻¹ s⁻²
-pub const _AU: f64 = 1.496e11;           // metres (Earth–Sun distance)
-pub const _SOLAR_RADIUS: f64 = 6.957e8;  // metres
-pub const _EARTH_RADIUS: f64 = 6.371e6;  // metres
-pub const _SOLAR_MASS: f64 = 1.989e30;   // kilograms
+pub const G: f64 = 4.0 * std::f64::consts::PI * std::f64::consts::PI;         // m³ kg⁻¹ s⁻²
+//pub const G: f64 = 1.0;              // m³ kg⁻¹ s⁻²
+pub const AU: f64 = 1.496e11;           // metres (Earth–Sun distance)
+pub const SOLAR_RADIUS: f64 = 6.957e8;  // metres
+pub const EARTH_RADIUS: f64 = 6.371e6;  // metres
+pub const SOLAR_MASS: f64 = 1.989e30;   // kilograms
 
+#[derive(Debug)]
 pub struct Body { 
   pub mass: f64,
   pub position: Vector3,
@@ -22,47 +23,89 @@ impl Body {
 
 impl Body { 
 
-  fn calc_distance(&self, other: &Body) -> f64 {
-    // Distance between the two objects centers of mass
-    ((other.position.x - self.position.x).powi(2) + (other.position.y - self.position.y).powi(2) + (other.position.z - self.position.z).powi(2)).sqrt()
-  }
+    fn calc_distance(&self, other: &Body) -> f64 {
+        // Distance between the two objects centers of mass
+        ((other.position.x - self.position.x).powi(2) + (other.position.y - self.position.y).powi(2) + (other.position.z - self.position.z).powi(2)).sqrt()
+    }
 
-  fn calc_gravitational_force(&self, other: &Body, r: f64) -> f64 {
-    (G * self.mass * other.mass) / r.powi(2)
-  }
+    fn calc_gravitational_force(&self, other: &Body, r: f64) -> f64 {
+        (G * self.mass * other.mass) / r.powi(2)
+    }
 
-  fn calc_direction_vector(&self, other: &Body, distance: f64) -> Vector3 {
-    (other.position - self.position) / distance
-  }
+    fn calc_direction_vector(&self, other: &Body, distance: f64) -> Vector3 {
+        (other.position - self.position) / distance
+    }
 
-  fn calc_acceleration(&self, force: f64) -> f64 {
-    force / self.mass
-  }
+    pub fn update_body(&mut self, acc_vec: Vector3, dt: f64) {
+        let final_vel = self.velocity + acc_vec * dt;
+        self.velocity = final_vel;
 
-  fn calc_final_velocity(&self, acc_vec: Vector3, dt: f64) -> Vector3 {
-    self.velocity + acc_vec * dt
-  }
-
-  pub fn acc_vec(&self, other: &Body) -> Vector3{
-    let distance = self.calc_distance(other);
-    let g_force = self.calc_gravitational_force(other, distance);
-    let dir_vector = self.calc_direction_vector(other, distance);
-
-    let acc = self.calc_acceleration(g_force);
-    let acc_vec = dir_vector * acc;
-    
-    acc_vec
-    
-  }
-
-pub fn update_body(&mut self, acc_vec: Vector3, dt: f64) {
-    let final_vel = self.calc_final_velocity(acc_vec, dt);
-    self.velocity = final_vel;
-
-    self.position += self.velocity * dt;
-}
+        self.position += self.velocity * dt;
+    }
 }
 
+
+pub struct Sandbox {
+    pub delta_time: f64,
+    pub bodies: Vec<Body>
+}
+
+impl Sandbox {
+    pub fn new(delta_time: f64) -> Sandbox{
+        Sandbox {bodies: vec![], delta_time: delta_time}
+    }
+}
+
+impl Sandbox {
+    pub fn create_body(&mut self, body: Body) {
+        self.bodies.push(body);
+    }
+
+    pub fn update(&mut self) {
+        
+        let mut acc_vecs: Vec<Vector3> = vec![];
+        let n = self.bodies.len();
+
+        for i in 0..n {
+            let mut total_acc = Vector3{x: 0.0, y: 0.0, z: 0.0};
+            for j in 0..n {
+
+                // skip if it is the same body
+                if i == j{
+                    continue;
+                }
+
+                let body = &self.bodies[i];
+                let other = &self.bodies[j];
+
+                // calcs distance between the two bodies
+                let distance = body.calc_distance(other);
+                // calcs direction unit vector
+                let dir_vector = body.calc_direction_vector(other, distance);
+                let g_force = body.calc_gravitational_force(other, distance);
+                
+                // scalar multipies dir vector with G-force to get force magnitude and direction, stored as a vector
+                let foce_dir_vector = dir_vector * g_force;
+
+                // calcs the acceleration vector with a = f / m.
+                // xyz components are each divded by mass. 
+                let acc_vec = foce_dir_vector / body.mass;
+
+                // sums acceleration between all the bodies.  
+                total_acc += acc_vec;
+            }
+
+            acc_vecs.push(total_acc);
+        }
+
+        for i in 0..n{
+            let body = &mut self.bodies[i];
+            let acc = acc_vecs[i];
+
+            body.update_body(acc, self.delta_time);
+        }  
+    }
+}
 
 
 #[cfg(test)]
@@ -109,8 +152,8 @@ mod distance_tests {
     fn works_at_astronomical_magnitudes() {
         // relative tolerance is scale-free, so the same TOL applies here
         let a = body_at(0.0, 0.0, 0.0);
-        let b = body_at(3.0 * _AU, 4.0 * _AU, 0.0);
-        assert_relative_eq!(a.calc_distance(&b), 5.0 * _AU, max_relative = TOL);
+        let b = body_at(3.0 * AU, 4.0 * AU, 0.0);
+        assert_relative_eq!(a.calc_distance(&b), 5.0 * AU, max_relative = TOL);
     }
 
     
@@ -127,16 +170,16 @@ mod force_tests {
 
     #[test]
     fn zero_force_with_no_mass() {
-        let a = Body::new(0.0, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let b = Body::new(0.0, Vector3 { x: _AU * 10.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(0.0, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let b = Body::new(0.0, Vector3 { x: AU * 10.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         assert_relative_eq!(a.calc_gravitational_force(&b, a.calc_distance(&b)), 0.0, epsilon = ABS_TOL);
     }
 
     #[test]
     fn zero_force_when_other_body_is_massless() {
-        let a = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let b = Body::new(0.0, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let b = Body::new(0.0, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         assert_relative_eq!(a.calc_gravitational_force(&b, a.calc_distance(&b)), 0.0, epsilon = ABS_TOL);
     }
@@ -151,9 +194,9 @@ mod force_tests {
 
     #[test]
     fn doubling_distance_quarters_force() {
-        let a = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let near = Body::new(_SOLAR_MASS, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let far = Body::new(_SOLAR_MASS, Vector3 { x: _AU * 2.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let near = Body::new(SOLAR_MASS, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let far = Body::new(SOLAR_MASS, Vector3 { x: AU * 2.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         let f_near = a.calc_gravitational_force(&near, a.calc_distance(&near));
         let f_far = a.calc_gravitational_force(&far, a.calc_distance(&far));
@@ -163,9 +206,9 @@ mod force_tests {
 
     #[test]
     fn doubling_mass_doubles_force() {
-        let a = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let light = Body::new(_SOLAR_MASS, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let heavy = Body::new(_SOLAR_MASS * 2.0, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let light = Body::new(SOLAR_MASS, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let heavy = Body::new(SOLAR_MASS * 2.0, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         let f_light = a.calc_gravitational_force(&light, a.calc_distance(&light));
         let f_heavy = a.calc_gravitational_force(&heavy, a.calc_distance(&heavy));
@@ -175,8 +218,8 @@ mod force_tests {
 
     #[test]
     fn force_is_symmetric_between_bodies() {
-        let a = Body::new(_SOLAR_MASS * 2.0, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let b = Body::new(_SOLAR_MASS, Vector3 { x: -_AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(SOLAR_MASS * 2.0, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let b = Body::new(SOLAR_MASS, Vector3 { x: -AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         assert_relative_eq!(
             a.calc_gravitational_force(&b, a.calc_distance(&b)),
@@ -188,10 +231,10 @@ mod force_tests {
     #[test]
     fn distance_is_direction_independent() {
         // same separation, different axis — force must be identical
-        let origin = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let on_x = Body::new(_SOLAR_MASS, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let on_y = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: _AU, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let on_z = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: _AU }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let origin = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let on_x = Body::new(SOLAR_MASS, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let on_y = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: AU, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let on_z = Body::new(SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: AU }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
         let f_x = origin.calc_gravitational_force(&on_x, origin.calc_distance(&on_x));
 
@@ -224,38 +267,11 @@ mod force_tests {
     #[test]
     fn handles_negative_coordinates() {
         // separation is 2 AU across the origin
-        let a = Body::new(_SOLAR_MASS, Vector3 { x: -_AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let b = Body::new(_SOLAR_MASS, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let a = Body::new(SOLAR_MASS, Vector3 { x: -AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
+        let b = Body::new(SOLAR_MASS, Vector3 { x: AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
 
-        let expected = (G * _SOLAR_MASS * _SOLAR_MASS) / (2.0 * _AU).powi(2);
+        let expected = (G * SOLAR_MASS * SOLAR_MASS) / (2.0 * AU).powi(2);
 
         assert_relative_eq!(a.calc_gravitational_force(&b, a.calc_distance(&b)), expected, max_relative = TOL);
-    }
-
-    #[test]
-    fn matches_known_sun_earth_force() {
-        const EARTH_MASS: f64 = 5.972e24;
-
-        let sun = Body::new(_SOLAR_MASS, Vector3 { x: 0.0, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let earth = Body::new(EARTH_MASS, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-
-        // Published value is roughly 3.54e22 N
-        assert_relative_eq!(
-            sun.calc_gravitational_force(&earth, sun.calc_distance(&earth)),
-            3.5422e22,
-            max_relative = 1e-4
-        );
-    }
-
-    #[test]
-    fn matches_hand_calculated_binary_pair() {
-        let a = Body::new(_SOLAR_MASS * 2.0, Vector3 { x: _AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-        let b = Body::new(_SOLAR_MASS, Vector3 { x: -_AU, y: 0.0, z: 0.0 }, Vector3 { x:0.0, y:0.0, z:0.0 });
-
-        assert_relative_eq!(
-            a.calc_gravitational_force(&b, a.calc_distance(&b)),
-            5.89878e27,
-            max_relative = 1e-5
-        );
     }
 }
