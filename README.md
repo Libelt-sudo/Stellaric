@@ -78,6 +78,25 @@ simulation step (`step,body,x,y,z`). There is no built-in plotting or
 rendering yet — the CSV is meant to be loaded into an external tool (e.g.
 a Python/matplotlib script, a spreadsheet, etc.) to visualize the orbits.
 
+### Simple Example: star and planet in a circular orbit
+
+A light planet orbiting a heavy star, using natural units (`G = 1.0`):
+
+```rust
+let star   = Body::new(1.0,   Vector3{x: 0.0, y: 0.0, z: 0.0}, Vector3{x: 0.0, y: -0.001, z: 0.0});
+let planet = Body::new(0.001, Vector3{x: 1.0, y: 0.0, z: 0.0}, Vector3{x: 0.0, y:  1.0,   z: 0.0});
+```
+
+The simulation was run for around 20,000 steps with a time step of
+`dt = 0.0005`.  
+
+Plotting the CSV with matplotlib gives:
+
+<img src="docs/images/star_planet.png" alt="Star and planet circular orbit" width="600">
+
+Body 1 (the star) stays almost fixed at the centre, while body 2 (the
+planet) orbits around body 1.
+
 ## Running
 
 ```bash
