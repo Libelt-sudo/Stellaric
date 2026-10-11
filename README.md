@@ -8,7 +8,7 @@ interacting with each other under gravity.
 
 ## Project structure
 
-This is a Cargo workspace made up of two crates:
+This is a Cargo workspace made up of three crates:
 
 ```
 stellaric/
@@ -19,17 +19,27 @@ stellaric/
 │       ├── lib.rs
 │       ├── vector.rs       # Vector3
 │       └── physics.rs      # Body, Sandbox, gravity/integration
-└── stellaric-visual/       # simulation runner / output
+├── stellaric-csv/          # simulation runner / CSV output
+│   ├── Cargo.toml
+│   └── src/
+│       └── main.rs         # sets up bodies, runs the sim, writes CSV
+└── stellaric-visual/       # real-time 3D visualization (kiss3d)
     ├── Cargo.toml
     └── src/
-        └── main.rs         # sets up bodies, runs the sim, writes CSV
+        └── main.rs         # sets up bodies, runs the sim, renders it
 ```
 
 - `stellaric-core` — the simulation engine. Defines `Vector3`, `Body`, and
   `Sandbox`, and implements the physics (gravitational force, acceleration,
   and position/velocity integration) used to step the simulation forward.
-- `stellaric-visual` — the entry point that sets up a system of bodies, runs the simulation for a number of steps,
-  and outputs the results.
+- `stellaric-csv` — (previously named `stellaric-visual`) sets up a system of
+  bodies, runs the simulation for a number of steps, and writes the results
+  to a CSV file.
+- `stellaric-visual` — renders the simulation in real time using the
+  [`kiss3d`](https://crates.io/crates/kiss3d) crate.
+
+> **Work in progress:** the visualization in `stellaric-visual` is still
+> crude and under active development.
 
 > **Heads up:** the `Vector3` type and its math (add, subtract, scale,
 > divide, dot product, cross product) are implemented from scratch in
@@ -62,7 +72,7 @@ Every input must use the same unit system as the chosen `G`.
   orbits), and the wide range of magnitudes costs floating-point precision.
 
 `G` is currently a constant in `stellaric-core/src/physics.rs`, and the
-time step is passed to `Sandbox::new` in `stellaric-visual/src/main.rs`.
+time step is passed to `Sandbox::new` in `stellaric-csv/src/main.rs` (and `stellaric-visual/src/main.rs`).
 When switching unit systems, change both.
 
 > **Heads up:** mixing unit systems is the easiest way to get meaningless
@@ -72,11 +82,17 @@ When switching unit systems, change both.
 
 ## Visual output
 
-The visual side of the project is currently limited to writing simulation
-data out to a CSV file (`orbit_data.csv`), with one row per body per
-simulation step (`step,body,x,y,z`). There is no built-in plotting or
-rendering yet — the CSV is meant to be loaded into an external tool (e.g.
-a Python/matplotlib script, a spreadsheet, etc.) to visualize the orbits.
+### Real-time visualization
+
+`stellaric-visual` renders the simulation live using the `kiss3d` crate.
+This implementation is still crude and a work in progress.
+
+### CSV output
+
+`stellaric-csv` writes simulation data out to a CSV file (`orbit_data.csv`),
+with one row per body per simulation step (`step,body,x,y,z`). The CSV is
+meant to be loaded into an external tool (e.g. a Python/matplotlib script,
+a spreadsheet, etc.) to plot the orbits.
 
 ### Simple Example: star and planet in a circular orbit
 
@@ -99,8 +115,16 @@ planet) orbits around body 1.
 
 ## Running
 
+Real-time visualization:
+
 ```bash
 cargo run -p stellaric-visual
+```
+
+CSV output:
+
+```bash
+cargo run -p stellaric-csv
 ```
 
 This will run the simulation and produce `orbit_data.csv` in the working
