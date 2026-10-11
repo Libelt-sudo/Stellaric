@@ -1,5 +1,5 @@
 [workspace]
-members = ["stellaric-core", "stellaric-visual"]
+members = ["stellaric-core", "stellaric-csv", "stellaric-visual"]
 resolver = "3"
 
 [workspace.package]

@@ -5,3 +5,5 @@ edition.workspace = true
 
 [dependencies]
 stellaric-core = {path = "../stellaric-core"}
+kiss3d = "0.47.0"
+

@@ -1,8 +1,8 @@
 use crate::vector::Vector3;
 
-
-pub const G: f64 = 4.0 * std::f64::consts::PI * std::f64::consts::PI;         // m³ kg⁻¹ s⁻²
-//pub const G: f64 = 1.0;              // m³ kg⁻¹ s⁻²
+//pub const G: f64 = 6.674e-11;         // m³ kg⁻¹ s⁻²
+//pub const G: f64 = 4.0 * std::f64::consts::PI * std::f64::consts::PI;         // m³ kg⁻¹ s⁻²
+pub const G: f64 = 1.0;                 // m³ kg⁻¹ s⁻²
 pub const AU: f64 = 1.496e11;           // metres (Earth–Sun distance)
 pub const SOLAR_RADIUS: f64 = 6.957e8;  // metres
 pub const EARTH_RADIUS: f64 = 6.371e6;  // metres
