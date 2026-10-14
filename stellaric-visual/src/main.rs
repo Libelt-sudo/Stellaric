@@ -1,11 +1,14 @@
+mod vis_body;
+
 use stellaric_core::physics::*;
 use stellaric_core::vector::*;
 use kiss3d::prelude::*;
 use std::collections::VecDeque;
 use std::vec;
 
-const TRAIL_LEN: usize = 500;
+use crate::vis_body::VisBody;
 
+const TRAIL_LEN: usize = 500;
 
 #[kiss3d::main]
 async fn main() {
@@ -50,37 +53,15 @@ async fn main() {
 
 
 
-    let mut spheres: Vec<SceneNode3d> = vec![];
+    let mut vis: Vec<VisBody> = system.bodies.iter().map(|_| VisBody::new(&mut scene, 1.0, GREEN)).collect();
 
-    for _ in 0..system.bodies.len() {
-        spheres.push(scene.add_sphere(1.0).set_color(GREEN));
-    }
-
-
-    
-    let mut trails: Vec<VecDeque<Vec3>> = vec![VecDeque::with_capacity(TRAIL_LEN); system.bodies.len()];
 
     while window.render_3d(&mut scene, &mut camera).await {
-        for i in 0..system.bodies.len() {
-            spheres[i].set_position(Vec3::new(system.bodies[i].position.x as f32, system.bodies[i].position.y as f32, system.bodies[i].position.z as f32));
-
-            let pos = spheres[i].position();
-            if trails[i].len() == TRAIL_LEN {
-                trails[i].pop_front();
-            }
-            trails[i].push_back(pos);
-
-            // draw the trail, fading out towards the oldest segment
-            let n = trails[i].len();
-            for j in 1..n {
-                let mut color = GREEN;
-                color.a = j as f32 / n as f32;
-                window.draw_line(trails[i][j - 1], trails[i][j], color, 2.0, false);
-            }
+        for (v, b) in vis.iter_mut().zip(&system.bodies){
+            v.update(b);
+            v.draw_trail(&mut window);
         }
-
-
-
+        
         system.update();
     }
     
